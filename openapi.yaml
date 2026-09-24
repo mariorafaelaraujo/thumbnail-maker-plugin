@@ -1,0 +1,138 @@
+openapi: 3.1.0
+info:
+  title: Thumbnail Maker Plugin API
+  version: 1.0.0
+  description: >-
+    API auxiliar para extrair IDs de vídeos do YouTube, localizar a thumbnail de
+    maior qualidade disponível e fornecer sua URL ou conteúdo binário. A geração
+    e edição de imagens devem acontecer no próprio GPT.
+servers:
+  - url: https://SEU-DOMINIO.example.com
+    description: Substitua pelo domínio HTTPS do seu deploy
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Verifica se o serviço está online
+      x-openai-isConsequential: false
+      responses:
+        '200':
+          description: Serviço online
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  service: { type: string }
+                required: [ok, service]
+  /youtube/thumbnail:
+    post:
+      operationId: getYouTubeThumbnail
+      summary: Localiza a melhor thumbnail para uma URL do YouTube
+      x-openai-isConsequential: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YouTubeUrlRequest'
+      responses:
+        '200':
+          description: Thumbnail localizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThumbnailResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /youtube/thumbnail-file:
+    get:
+      operationId: getYouTubeThumbnailFile
+      summary: Retorna diretamente a thumbnail como image/jpeg
+      description: >-
+        Endpoint binário útil para clientes HTTP comuns. Em GPT Actions, imagens
+        e vídeos não podem ser entregues como openaiFileResponse; prefira
+        /youtube/thumbnail-reference para obter uma URL HTTPS de referência.
+      x-openai-isConsequential: false
+      parameters:
+        - in: query
+          name: url
+          required: true
+          schema: { type: string, format: uri }
+          description: URL completa do vídeo no YouTube.
+      responses:
+        '200':
+          description: Arquivo JPEG da thumbnail
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /youtube/thumbnail-reference:
+    post:
+      operationId: getYouTubeThumbnailReference
+      summary: Retorna uma referência visual apropriada para uso por um GPT Action
+      description: >-
+        Retorna JSON com uma URL HTTPS pública para a thumbnail. Esse é o formato
+        recomendado para imagens, pois openaiFileResponse não aceita imagens nem vídeos.
+      x-openai-isConsequential: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YouTubeUrlRequest'
+      responses:
+        '200':
+          description: Referência visual localizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  video_id: { type: string }
+                  image_url: { type: string, format: uri }
+                  mime_type: { type: string, const: image/jpeg }
+                  usage: { type: string }
+                  message: { type: string }
+                required: [video_id, image_url, mime_type, usage, message]
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  schemas:
+    YouTubeUrlRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        youtube_url:
+          type: string
+          format: uri
+          examples:
+            - https://www.youtube.com/watch?v=dQw4w9WgXcQ
+            - https://youtu.be/dQw4w9WgXcQ
+            - https://www.youtube.com/shorts/dQw4w9WgXcQ
+            - https://www.youtube.com/live/dQw4w9WgXcQ
+            - https://www.youtube.com/embed/dQw4w9WgXcQ
+      required: [youtube_url]
+    ThumbnailResponse:
+      type: object
+      properties:
+        video_id: { type: string }
+        source_url: { type: string, format: uri }
+        message: { type: string }
+      required: [video_id, source_url, message]
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+  responses:
+    ErrorResponse:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
