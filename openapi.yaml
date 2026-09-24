@@ -7,8 +7,8 @@ info:
     maior qualidade disponível e fornecer sua URL ou conteúdo binário. A geração
     e edição de imagens devem acontecer no próprio GPT.
 servers:
-  - url: https://SEU-DOMINIO.example.com
-    description: Substitua pelo domínio HTTPS do seu deploy
+  - url: https://thumbnail-maker-plugin.onrender.com
+    description: Deploy público no Render
 paths:
   /health:
     get:
